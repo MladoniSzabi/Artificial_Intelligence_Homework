@@ -1,0 +1,48 @@
+Project Layout:
+
+Search based method for level generation
+
+This project will explain how to use a search based method (specifically evolutionary search) to generate levels for a dungeon crawler. It will explain the core parts of the search based method along with how different content representations effect the outcome of the search.
+
+This tutorial is based on the second chapter of the book: Procedural Content Generation in Games (https://www.pcgbook.com/chapter02.pdf)
+
+1. Key parts of the search based method:
+
+The key components of the search based method are:
+	from the book:
+	1. the algorithm
+	2. the content representation
+	3. the evaluation function
+	
+	from the lecture slides:
+	1. the mutation function
+
+2. The algorithm:
+
+The algorithm is at the core (the book referes to it as the "engine") of the method. Its job is simple: expand the next level of the search tree (partly), evaluate the new nodes, compare the new nodes and the old ones together, keep the best ones and discard the rest.
+
+The algorithm can be tweaked by chaning the constants at the beginning; the larger the numbers to more nodes will be explored, the more costly the algorithm becomes.
+
+#TODO: Don't forget to comment the code
+
+3. The content representation
+
+Content representation refers to how the level is encoded. Content can be represented on a scale from direct to indirect.
+For example a direct representation would be a matrix where each element of the matrix directly translates to a cell in the level # TODO: better word for "cell"
+and an indirect representation would be having a collection of rooms, each with its own positions and sizes.
+
+Usually the more direct the representation the larger the search space, but it can result in more creative levels that are not confined by the assumptions made by the more indirect representations.
+
+4. The evaluation function
+
+The evaluation function takes an instance of a level and returns parameters that are used to compare level instances between them. Some examples of characteristics that could be considered would be: difficulty, which could be measured as no. of enemies per room or explorability, which could be measured as no. of rooms.
+
+The evaluation function is tied to the content representation, since if the level is represented in a different format, the evaluation function won't know how to interpret it.
+
+For the direct content representation, an ideal number of walls, enemies and treasures has been defined. The number of enemies will dictate how difficult the level will be whereas the number of treasures can incentivise exploration. Another factor that will be measured will be the distance from the start to the end. The larger the distance the more the player will have to explore and if the distance is infinite, then it is impossible to finish the level so it should be marked down.
+
+# TODO: indirect content representation
+
+5. Mutation function
+
+The mutation function is responsible for making alterations to a level. 

@@ -97,7 +97,7 @@ def astar(level, start, destination):
 def evaluate(level):
     
     # We don't want to create too many walls as this will make some areas inaccesible and it also looks ugly
-    IDEAL_WALL_COUNT = 400
+    IDEAL_WALL_COUNT = 600
     # How many treasures do we want per level (on average)
     IDEAL_TREASURE_COUNT = 5
     # How many enemies do we want per level (on average)
@@ -136,6 +136,16 @@ def evaluate(level):
 def mutate_level(level):
     new_level = [ [0] * LEVEL_SIZE for _ in range(LEVEL_SIZE)]
 
+    PROBABILITY = {
+        "empty_to_wall_no_neighbour": 0.001,
+        "empty_to_wall_with_neighbour": 0.1,
+        "empty_to_treasure": 0.0005,
+        "empty_to_enemy": 0.0005,
+        "wall_to_empty": 0.0005,
+        "enemy_to_empty": 0.0005,
+        "treasure_to_empty": 0.0005
+    }
+    
     for y in range(len(level)):
         for x in range(len(level[y])):
             cell = level[y][x]
@@ -150,37 +160,32 @@ def mutate_level(level):
                         wall_neighbour_count += 1
 
                 if wall_neighbour_count == 0:
-                    if random.random() < 0.001:
+                    if random.random() < PROBABILITY["empty_to_wall_no_neighbour"]:
                         new_level[y][x] = Cells.WALL
-                elif wall_neighbour_count == 1:
-                    if random.random() < 0.1:
+                else:
+                    if random.random() < PROBABILITY["empty_to_wall_with_neighbour"]:
                         new_level[y][x] = Cells.WALL
-                elif wall_neighbour_count == 2:
-                    if random.random() < 0.0000005:
-                        new_level[y][x] = Cells.WALL
-                elif wall_neighbour_count == 3:
-                    pass
                 
                 # If the empty space has not turned into a wall,
                 # try turning it into treasure or an enemy
                 if new_level[y][x] == Cells.EMPTY:
-                    if random.random() < 0.0005:
+                    if random.random() < PROBABILITY["empty_to_treasure"]:
                         new_level[y][x] = Cells.TREASURE
                     
-                    elif random.random() < 0.0005:
+                    elif random.random() < PROBABILITY["empty_to_enemy"]:
                         new_level[y][x] = Cells.ENEMY
 
             
             if cell == Cells.WALL:
-                if random.random() < 0.0005:
+                if random.random() < PROBABILITY["wall_to_empty"]:
                     new_level[y][x] = Cells.EMPTY
             
             if cell == Cells.ENEMY:
-                if random.random() < 0.0005:
+                if random.random() < PROBABILITY["enemy_to_empty"]:
                     new_level[y][x] = Cells.EMPTY
             
             if cell == Cells.TREASURE:
-                if random.random() < 0.0005:
+                if random.random() < PROBABILITY["treasure_to_empty"]:
                     new_level[y][x] = Cells.EMPTY
 
     return new_level

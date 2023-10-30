@@ -14,8 +14,8 @@ class Room:
         self.y = y
         self.width = width
         self.height = height
-        self.enemies = enemies
-        self.treasures = treasures
+        self.enemies = []
+        self.treasures = []
 
 def getEmptyLevel():
     return []
@@ -67,13 +67,24 @@ def evaluate(level):
                 break
         
         # TODO: this does not take into consideration overlapping rooms
-        enemy_density += density_error_function(IDEAL_ENEMY_DENSITY, room.enemies / (room.width * room.height))
-        treasure_density += density_error_function(IDEAL_TREASURE_DENSITY, room.treasures / (room.width * room.height))
+        enemy_density += density_error_function(IDEAL_ENEMY_DENSITY, len(room.enemies) / (room.width * room.height))
+        treasure_density += density_error_function(IDEAL_TREASURE_DENSITY, len(room.treasures) / (room.width * room.height))
 
     room_count_error = abs(IDEAL_NO_OF_ROOMS - max(no_of_rooms, 0)*4)
 
     return (room_count_error, enemy_density / len(level), treasure_density / len(level))
 
+def add_entity(room, array):
+    if random.random() < 0.5:
+        tries = 0
+        entity = (random.randrange(room.x + 1, room.x + room.width), random.randrange(room.y + 1, room.y + room.height))
+        while (entity in room.enemies or entity in room.treasures) and tries < 10:
+            entity = (random.randrange(room.x + 1, room.x + room.width), random.randrange(room.y + 1, room.y + room.height))
+            tries += 1
+        if tries < 10:
+            array.append(entity)
+    elif array and random.random() < 0.5:
+        del array[random.randrange(len(array))]
 
 def mutate_level(level):
     new_level = []
@@ -82,21 +93,31 @@ def mutate_level(level):
         if random.random() < 0.05:
             continue
 
-        room.x = min(max(0, room.x + random.randint(-1,1)), LEVEL_SIZE)
-        room.y = min(max(0, room.y + random.randint(-1,1)), LEVEL_SIZE)
-        room.width = max(min(room.width + random.randint(-1,1), LEVEL_SIZE - room.x), 5)
-        room.height = max(min(room.height + random.randint(-1,1), LEVEL_SIZE - room.y), 5)
+        room.x = min(max(0, room.x + random.randint(-1,1)), LEVEL_SIZE - room.width - 1)
+        room.y = min(max(0, room.y + random.randint(-1,1)), LEVEL_SIZE - room.height - 1)
+        room.width = max(min(room.width + random.randint(-1,1), LEVEL_SIZE - room.x - 1), 5)
+        room.height = max(min(room.height + random.randint(-1,1), LEVEL_SIZE - room.y - 1), 5)
 
-        enemies_copy = room.enemies
-        treasures_copy = room.treasures
+        # Make sure a mutation of the room did not leave us with a treasure or enemy outside of it
+        # If it did, remove them
+        enemies = []
+        treasures = []
+        for enemy in room.enemies:
+            if is_point_in_room(enemy, room):
+                enemies.append(enemy)
+        
+        for treasure in room.treasures:
+            if is_point_in_room(treasure, room):
+                treasures.append(treasure)
 
-        room.enemies = max(0, room.enemies + random.randint(-2, 2))
-        room.treasures = max(0, room.treasures + random.randint(-2, 2))
+        room.enemies = enemies
+        room.treasures = treasures
 
-        # Do not add new enemies or treasures if it fills up the room
-        if (room.enemies + room.treasures) >= ( (room.width-2) * (room.height-2) / 2):
-            room.enemies = enemies_copy
-            room.treasures = treasures_copy
+        # Randomly add or remove an enemy
+        add_entity(room, room.enemies)
+
+        # Randomly add or remove a treasure
+        add_entity(room, room.treasures)
 
         new_level.append(room)
     
@@ -104,58 +125,47 @@ def mutate_level(level):
     if random.random() < 0.1:
         width = random.randint(4,10)
         height = random.randint(4,10)
-        enemies = random.randint(0, max(5,  int((width-2) * (height-2) / 4)))
-        treasures = random.randint(0, max(1, int((width-2) * (height-2) / 4)))
-        new_level.append(Room(
+
+        room = Room(
             random.randint(0,40),     # x
             random.randint(0,40),     # y
             width,                    # width
             height,                   # height
-            enemies,                  # enemies
-            treasures                 # treasures
-        ))
+            [],                       # enemies
+            []                        # treasures
+        )
+
+        enemies = []
+        treasures = []
+
+        for _ in range(random.randrange(int(width * height / 8))):
+            add_entity(room, enemies)
+            room.enemies = enemies
+        
+        for _ in range(random.randrange(int(width * height / 8))):
+            add_entity(room, treasures)
+            room.treasures = treasures
+        
+        room.enemies = enemies
+        room.treasures = treasures
+
+        new_level.append(room)
     
     return new_level
 
+def is_room_margin(point, room):
+    return (point[0] == room.x and point[1] >= room.y and point[1] <= room.y + room.height) or \
+        (point[0] == room.x + room.width and point[1] >= room.y and point[1] <= room.y + room.height) or \
+        (point[1] == room.y and point[0] >= room.x and point[0] <= room.x + room.width) or \
+        (point[1] == room.y + room.height and point[0] >= room.x and point[0] <= room.x + room.width)
+
 def print_level(level):
-    for room in level:
-        print(room.x, room.y, room.width, room.height, room.enemies, room.treasures)
-    
     enemies = []
     treasures = []
 
     for room in level:
-        for _ in range(room.enemies):
-            tries= 1
-            enemy = (
-                random.randint(room.x + 1, room.x + room.width - 2),
-                random.randint(room.y + 1, room.y + room.height - 2)
-            )
-
-            while (enemy in treasures + enemies) and (tries < 10):
-                enemy = (
-                    random.randint(room.x + 1, room.x + room.width - 2),
-                    random.randint(room.y + 1, room.y + room.height - 2)
-                )
-                tries += 1
-
-            enemies.append(enemy)
-
-        for _ in range(room.treasures):
-            tries = 1
-            treasure = (
-                random.randint(room.x + 1, room.x + room.width - 2),
-                random.randint(room.y + 1, room.y + room.height - 2)
-            )
-
-            while (treasure in treasures + enemies) and (tries < 10):
-                treasure = (
-                    random.randint(room.x + 1, room.x + room.width - 2),
-                    random.randint(room.y + 1, room.y + room.height - 2)
-                )
-                tries += 1
-
-            treasures.append(treasure)
+        enemies += room.enemies
+        treasures += room.treasures
     
     for y in range(LEVEL_SIZE):
         for x in range(LEVEL_SIZE):
@@ -169,15 +179,10 @@ def print_level(level):
             
             is_wall = False
             for room1 in level:
-                if (x == room1.x and y >= room1.y and y <= room1.y + room1.height) or \
-                    (x == room1.x + room1.width and y >= room1.y and y <= room1.y + room1.height) or \
-                    (y == room1.y and x >= room1.x and x <= room1.x + room1.width) or \
-                    (y == room1.y + room1.height and x >= room1.x and x <= room1.x + room1.width):
-
-
+                if is_room_margin((x,y), room1):
                     is_wall = True
                     for room2 in level:
-                        if is_point_in_room((x,y), room1):
+                        if is_point_in_room((x,y), room2):
                             is_wall = False
                             break
 
